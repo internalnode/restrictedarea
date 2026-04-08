@@ -16,20 +16,26 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   margin: 0;
-  min-height: 100%;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  overflow-x: hidden;
 }
 
 body {
   font-family: "IBM Plex Mono", monospace;
+  position: fixed;
+  inset: 0;
   background:
     radial-gradient(circle at top left, rgba(141,160,124,0.08), transparent 26%),
     linear-gradient(180deg, #030503 0%, #060806 100%);
-  position: relative;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+  touch-action: manipulation;
 }
 
 body::before {
@@ -51,27 +57,40 @@ body::after {
   opacity: 0.4;
 }
 
+.app-shell {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
 .app {
-  width: min(760px, calc(100% - 20px));
-  margin: 10px auto;
+  width: min(760px, calc(100vw - 36px));
+  height: calc(100dvh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom)));
+  margin: 0 auto;
+  position: relative;
+  top: max(12px, env(safe-area-inset-top));
 }
 
 .viewport {
   position: relative;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 
 .track {
   display: flex;
   width: 400%;
+  height: 100%;
   transform: translateX(0%);
   transition: transform 0.3s ease;
-  align-items: flex-start;
 }
 
 .screen {
   width: 25%;
   flex: 0 0 25%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .card {
@@ -80,7 +99,6 @@ body::after {
     linear-gradient(180deg, #0e140e 0%, #090d09 100%);
   border: 1px solid var(--line);
   border-radius: 2px;
-  padding: 16px;
   position: relative;
   overflow: hidden;
   box-shadow:
@@ -94,6 +112,42 @@ body::after {
   inset: 0;
   border: 1px solid rgba(255,255,255,0.01);
   pointer-events: none;
+}
+
+.card-app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-head {
+  flex: 0 0 auto;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.014) 0%, rgba(255,255,255,0.004) 100%);
+  position: relative;
+  z-index: 2;
+}
+
+.card-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 14px 16px;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.card-actions {
+  flex: 0 0 auto;
+  padding: 12px 16px 16px;
+  border-top: none;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.004) 0%, rgba(255,255,255,0.014) 100%);
+  position: relative;
+  z-index: 2;
 }
 
 .system-line {
@@ -128,6 +182,7 @@ body::after {
 
 .sub {
   margin-top: 10px;
+  margin-bottom: 14px;
   color: var(--accent);
   font-size: 11px;
   line-height: 1.6;
@@ -136,23 +191,29 @@ body::after {
 }
 
 .text {
-  margin-top: 16px;
+  margin: 0;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.72;
 }
 
 .alert-box,
-.block,
 .file,
 .detail-box,
 .meta-box {
   border: 1px solid var(--line-soft);
   background: rgba(255,255,255,0.012);
   padding: 12px;
-  margin-top: 12px;
+  margin-top: 16px;
   border-radius: 0;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.008);
+}
+
+.alert-box:first-child,
+.file:first-child,
+.detail-box:first-child,
+.meta-box:first-child {
+  margin-top: 0;
 }
 
 .alert-box {
@@ -168,20 +229,24 @@ body::after {
   text-transform: uppercase;
 }
 
-.row-grid,
 .detail-grid,
 .mission-meta-grid {
   display: grid;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 6px;
 }
 
 .mission-meta-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
+.mission-meta-grid .meta-box {
+  margin-top: 0;
+  padding: 10px 12px;
 }
 
 .meta-label,
-.block-title,
 .detail-kicker {
   color: var(--accent);
   font-size: 11px;
@@ -190,8 +255,7 @@ body::after {
   text-transform: uppercase;
 }
 
-.meta-value,
-.block-value {
+.meta-value {
   font-size: 13px;
   line-height: 1.6;
 }
@@ -200,6 +264,10 @@ body::after {
   display: grid;
   gap: 10px;
   margin-top: 16px;
+}
+
+.btn-row:first-child {
+  margin-top: 0;
 }
 
 .btn {
@@ -318,7 +386,6 @@ body::after {
   color: var(--accent);
 }
 
-/* OPERATOR PANEL */
 .operator-grid {
   display: grid;
   gap: 8px;
@@ -353,11 +420,10 @@ body::after {
   color: var(--accent-strong);
 }
 
-/* TERMINAL DIVIDER */
 .terminal-divider {
   position: relative;
   height: 12px;
-  margin: 16px 0;
+  margin: 22px 0 18px;
   overflow: hidden;
   pointer-events: none;
 }
@@ -385,7 +451,6 @@ body::after {
   padding-left: 8px;
 }
 
-/* TERMINAL */
 .terminal-prompt::before {
   content: ">> ";
   color: var(--accent);
@@ -404,23 +469,33 @@ body::after {
   50%, 100% { opacity: 0; }
 }
 
-/* loading */
-.loading-overlay {
+.loading-overlay,
+.shutdown-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(6, 8, 6, 0.98);
   border: 1px solid var(--line);
   border-radius: 2px;
   padding: 16px;
   display: none;
-  z-index: 20;
 }
 
-.loading-overlay.active {
+.loading-overlay {
+  background: rgba(6, 8, 6, 0.98);
+  z-index: 30;
+}
+
+.shutdown-overlay {
+  background: rgba(3, 5, 3, 0.995);
+  z-index: 50;
+}
+
+.loading-overlay.active,
+.shutdown-overlay.active {
   display: block;
 }
 
-.loading-title {
+.loading-title,
+.shutdown-title {
   color: var(--alert);
   font-size: 11px;
   margin-bottom: 14px;
@@ -429,12 +504,14 @@ body::after {
   text-transform: uppercase;
 }
 
-.loading-lines {
+.loading-lines,
+.shutdown-lines {
   display: grid;
   gap: 8px;
 }
 
-.loading-line {
+.loading-line,
+.shutdown-line {
   color: var(--muted);
   font-size: 12px;
   opacity: 0;
@@ -442,7 +519,8 @@ body::after {
   min-height: 1.2em;
 }
 
-.loading-line.visible {
+.loading-line.visible,
+.shutdown-line.visible {
   opacity: 1;
 }
 
@@ -469,6 +547,83 @@ body::after {
   text-transform: uppercase;
 }
 
+.shutdown-box {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.shutdown-final {
+  margin-top: auto;
+  color: var(--danger);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.shutdown-final.visible {
+  opacity: 1;
+}
+
+/* CRT SHUTDOWN EFFECT */
+.crt-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 45;
+  opacity: 0;
+  background:
+    radial-gradient(circle at center, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.35) 22%, rgba(255,255,255,0.08) 42%, transparent 68%);
+  mix-blend-mode: screen;
+}
+
+.crt-flash.active {
+  animation: crtFlash 220ms ease-out forwards;
+}
+
+@keyframes crtFlash {
+  0% {
+    opacity: 0;
+    transform: scaleY(1);
+    filter: brightness(1);
+  }
+  20% {
+    opacity: 1;
+    transform: scaleY(1.02);
+    filter: brightness(1.8);
+  }
+  55% {
+    opacity: 0.8;
+    transform: scaleY(0.18);
+    filter: brightness(1.4);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(0.02);
+    filter: brightness(0.7);
+  }
+}
+
+.viewport.crt-off::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  background: #000;
+  opacity: 0;
+  animation: crtFadeToBlack 320ms ease-out forwards;
+}
+
+@keyframes crtFadeToBlack {
+  0% { opacity: 0; }
+  35% { opacity: 0.15; }
+  100% { opacity: 1; }
+}
+
 .loading-overlay.glitch {
   animation: overlayGlitch 0.18s linear 1;
 }
@@ -484,13 +639,27 @@ body::after {
 
 @media (max-width: 640px) {
   .app {
-    width: calc(100% - 12px);
-    margin: 6px auto;
+    width: calc(100vw - 32px);
+    height: calc(100dvh - max(10px, env(safe-area-inset-top)) - max(10px, env(safe-area-inset-bottom)));
+    top: max(10px, env(safe-area-inset-top));
   }
 
-  .card,
-  .loading-overlay {
-    padding: 13px;
+  .card-head {
+    padding: 14px 14px 12px;
+  }
+
+  .card-body {
+    padding: 12px 14px;
+  }
+
+  .card-actions {
+    padding: 12px 14px 14px;
+    border-top: none;
+  }
+
+  .loading-overlay,
+  .shutdown-overlay {
+    padding: 14px;
   }
 
   .file-top,
@@ -506,6 +675,14 @@ body::after {
 
   .mission-meta-grid {
     grid-template-columns: 1fr;
+    gap: 6px;
+    margin-top: 18px;
+    margin-bottom: 8px;
+  }
+
+  .mission-meta-grid .meta-box {
+    margin-top: 0;
+    padding: 10px 12px;
   }
 
   .op-row span:last-child {

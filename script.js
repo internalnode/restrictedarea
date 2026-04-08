@@ -1,56 +1,102 @@
 var currentIndex = 0;
 var bootRunning = false;
+var terminalLocked = false;
 
-/* =========================
-   GESTION SCROLL INTELLIGENT
-========================= */
-
-function updateScrollLock() {
-  var screens = document.querySelectorAll(".screen");
-  if (!screens.length || !screens[currentIndex]) return;
-
-  var activeScreen = screens[currentIndex];
-  var card = activeScreen.querySelector(".card") || activeScreen;
-
-  var contentHeight = card.scrollHeight;
-  var viewportHeight = window.innerHeight;
-
-  if (contentHeight <= viewportHeight - 10) {
-    document.documentElement.style.overflowY = "hidden";
-    document.body.style.overflowY = "hidden";
-  } else {
-    document.documentElement.style.overflowY = "auto";
-    document.body.style.overflowY = "auto";
+var loadingPresets = {
+  login: {
+    title: "BOOT SEQUENCE // SESSION AUTHENTICATION",
+    lines: [
+      "INITIALIZING SECURE SESSION...",
+      "VERIFYING ACCESS TOKEN...",
+      "CONNECTING TO INTERNAL NODE...",
+      "MOUNTING OPERATOR FILE...",
+      "SESSION VALIDATED."
+    ]
+  },
+  operations: {
+    title: "ARCHIVE ACCESS // OPERATIONS REGISTRY",
+    lines: [
+      "CLOSING OPERATOR FILE VIEW...",
+      "REQUESTING ARCHIVE ACCESS...",
+      "VERIFYING CLEARANCE LEVEL...",
+      "MOUNTING OPERATIONS REGISTRY...",
+      "ARCHIVE READY."
+    ]
+  },
+  operationsReturn: {
+    title: "ARCHIVE ACCESS // OPERATIONS REGISTRY",
+    lines: [
+      "CLOSING MISSION FILE...",
+      "RETURNING TO ARCHIVE INDEX...",
+      "VERIFYING SESSION INTEGRITY...",
+      "RESTORING OPERATIONS REGISTRY...",
+      "ARCHIVE READY."
+    ]
+  },
+  operator: {
+    title: "PROFILE ACCESS // OPERATOR FILE",
+    lines: [
+      "CLOSING ARCHIVE VIEW...",
+      "RESTORING OPERATOR FILE...",
+      "VERIFYING LOCAL SESSION...",
+      "LOADING PERSONNEL RECORD...",
+      "OPERATOR FILE READY."
+    ]
+  },
+  mission: {
+    title: "FILE ACCESS // OPERATION DOSSIER",
+    lines: [
+      "REQUESTING MISSION FILE...",
+      "DECRYPTING ARCHIVED ENTRY...",
+      "VERIFYING DOCUMENT INTEGRITY...",
+      "LOADING FIELD REPORT...",
+      "MISSION FILE READY."
+    ]
+  },
+  default: {
+    title: "BOOT SEQUENCE // SESSION AUTHENTICATION",
+    lines: [
+      "INITIALIZING SECURE SESSION...",
+      "VERIFYING ACCESS TOKEN...",
+      "CONNECTING TO INTERNAL NODE...",
+      "MOUNTING ARCHIVE REGISTRY...",
+      "SESSION VALIDATED."
+    ]
   }
+};
+
+function getScrollBox(index) {
+  var screens = document.querySelectorAll(".screen");
+  if (!screens[index]) return null;
+  return screens[index].querySelector(".screen-scroll");
 }
 
-function forceScrollTop() {
-  window.scrollTo(0, 0);
-  document.body.scrollTop = 0;
-  document.documentElement.scrollTop = 0;
+function scrollScreenTop(index) {
+  var scrollBox = getScrollBox(index);
+  if (!scrollBox) return;
 
-  requestAnimationFrame(() => window.scrollTo(0, 0));
+  scrollBox.scrollTop = 0;
+
+  requestAnimationFrame(function () {
+    scrollBox.scrollTop = 0;
+  });
+
+  setTimeout(function () {
+    scrollBox.scrollTop = 0;
+  }, 60);
 }
-
-/* =========================
-   NAVIGATION
-========================= */
 
 function goTo(index) {
+  if (terminalLocked) return;
+
   var track = document.getElementById("track");
   if (!track) return;
 
   currentIndex = index;
   track.style.transform = "translateX(-" + (index * 25) + "%)";
 
-  forceScrollTop();
-
-  setTimeout(updateScrollLock, 60);
+  scrollScreenTop(index);
 }
-
-/* =========================
-   LOADING
-========================= */
 
 function resetLoading() {
   var bar = document.getElementById("progressBar");
@@ -64,6 +110,54 @@ function resetLoading() {
       el.textContent = "";
     }
   }
+}
+
+function resetShutdown() {
+  var ids = ["shutdownLine1", "shutdownLine2", "shutdownLine3", "shutdownLine4", "shutdownLine5"];
+  for (var i = 0; i < ids.length; i++) {
+    var el = document.getElementById(ids[i]);
+    if (el) {
+      el.classList.remove("visible");
+      el.textContent = "";
+    }
+  }
+
+  var finalEl = document.getElementById("shutdownFinal");
+  if (finalEl) {
+    finalEl.classList.remove("visible");
+  }
+}
+
+function ensureCrtFlash() {
+  var viewport = document.querySelector(".viewport");
+  if (!viewport) return null;
+
+  var existing = document.getElementById("crtFlash");
+  if (existing) return existing;
+
+  var flash = document.createElement("div");
+  flash.id = "crtFlash";
+  flash.className = "crt-flash";
+  viewport.appendChild(flash);
+  return flash;
+}
+
+function playCrtShutdownEffect() {
+  var viewport = document.querySelector(".viewport");
+  var flash = ensureCrtFlash();
+
+  if (!viewport || !flash) return;
+
+  flash.classList.remove("active");
+  viewport.classList.remove("crt-off");
+
+  void flash.offsetWidth;
+
+  flash.classList.add("active");
+
+  setTimeout(function () {
+    viewport.classList.add("crt-off");
+  }, 120);
 }
 
 function typeText(element, text, speed, callback) {
@@ -88,44 +182,54 @@ function typeText(element, text, speed, callback) {
   step();
 }
 
-function bootTo(index) {
+function bootTo(index, presetName) {
+  if (terminalLocked) return;
   if (bootRunning) return;
   if (index === currentIndex) return;
 
   var overlay = document.getElementById("loadingOverlay");
   var bar = document.getElementById("progressBar");
+  var titleEl = document.getElementById("loadingTitle");
 
   if (!overlay || !bar) {
     goTo(index);
     return;
   }
 
-  bootRunning = true;
-  resetLoading();
-  overlay.classList.add("active");
-
-  var lines = [
-    "INITIALIZING SECURE SESSION...",
-    "VERIFYING ACCESS TOKEN...",
-    "CONNECTING TO INTERNAL NODE...",
-    "MOUNTING ARCHIVE REGISTRY...",
-    "SESSION VALIDATED."
-  ];
-
+  var preset = loadingPresets[presetName] || loadingPresets.default;
+  var lines = preset.lines;
   var ids = ["line1", "line2", "line3", "line4", "line5"];
   var progress = [18, 39, 62, 84, 100];
   var currentLine = 0;
 
+  if (titleEl) {
+    titleEl.textContent = preset.title;
+  }
+
+  bootRunning = true;
+  resetLoading();
+  overlay.classList.add("active");
+
+  var glitchCount = 1 + Math.floor(Math.random() * 2);
+  for (var g = 0; g < glitchCount; g++) {
+    (function(delay) {
+      setTimeout(function() {
+        overlay.classList.remove("glitch");
+        void overlay.offsetWidth;
+        overlay.classList.add("glitch");
+      }, delay);
+    })(180 + Math.floor(Math.random() * 700));
+  }
+
   function writeNextLine() {
     if (currentLine >= lines.length) {
       setTimeout(function () {
-        goTo(index);
+        if (!terminalLocked) {
+          goTo(index);
+        }
         overlay.classList.remove("active");
         bootRunning = false;
-
-        forceScrollTop();
-        updateScrollLock();
-
+        scrollScreenTop(index);
       }, 260);
       return;
     }
@@ -149,42 +253,50 @@ function bootTo(index) {
   writeNextLine();
 }
 
-/* =========================
-   MISSIONS
-========================= */
-
 function openMission(key) {
+  if (terminalLocked) return;
+
   var mission = missions[key];
   if (!mission) return;
 
-  document.getElementById("detailSystemLine").textContent = mission.system;
-  document.getElementById("detailMainTitle").textContent = mission.title;
-  document.getElementById("detailSub").textContent = mission.sub;
-  document.getElementById("detailClearance").textContent = mission.clearance || "—";
-  document.getElementById("detailTheatre").textContent = mission.theatre || "—";
-  document.getElementById("detailRisk").textContent = mission.risk || "—";
-
+  var systemEl = document.getElementById("detailSystemLine");
+  var titleEl = document.getElementById("detailMainTitle");
+  var subEl = document.getElementById("detailSub");
   var contextEl = document.getElementById("detailContext");
   var outcomeEl = document.getElementById("detailOutcome");
   var timelineEl = document.getElementById("detailTimeline");
 
-  contextEl.textContent = "";
-  outcomeEl.textContent = "";
-  timelineEl.innerHTML = "";
+  var clearanceEl = document.getElementById("detailClearance");
+  var theatreEl = document.getElementById("detailTheatre");
+  var riskEl = document.getElementById("detailRisk");
 
-  bootTo(3);
+  if (systemEl) systemEl.textContent = mission.system;
+  if (titleEl) titleEl.textContent = mission.title;
+  if (subEl) subEl.textContent = mission.sub;
+  if (clearanceEl) clearanceEl.textContent = mission.clearance || "—";
+  if (theatreEl) theatreEl.textContent = mission.theatre || "—";
+  if (riskEl) riskEl.textContent = mission.risk || "—";
+
+  if (contextEl) contextEl.textContent = "";
+  if (outcomeEl) outcomeEl.textContent = "";
+  if (timelineEl) timelineEl.innerHTML = "";
+
+  scrollScreenTop(3);
+  bootTo(3, "mission");
 
   setTimeout(function () {
-    forceScrollTop();
-    updateScrollLock();
+    if (terminalLocked) return;
+
+    scrollScreenTop(3);
 
     typeText(contextEl, mission.context, 8, function () {
-
       var i = 0;
 
       function addNext() {
+        if (terminalLocked) return;
+
         if (i >= mission.timeline.length) {
-          typeText(outcomeEl, mission.outcome, 8, updateScrollLock);
+          typeText(outcomeEl, mission.outcome, 8);
           return;
         }
 
@@ -193,7 +305,6 @@ function openMission(key) {
 
         typeText(li, mission.timeline[i], 7, function () {
           i++;
-          updateScrollLock();
           setTimeout(addNext, 60);
         });
       }
@@ -204,14 +315,95 @@ function openMission(key) {
   }, 500);
 }
 
-/* =========================
-   INIT
-========================= */
+function lockTerminalPermanently() {
+  terminalLocked = true;
+  document.body.classList.add("terminal-dead");
 
-window.addEventListener("resize", updateScrollLock);
+  var app = document.querySelector(".app");
+  if (app) {
+    app.style.pointerEvents = "none";
+  }
+}
+
+function terminateSession() {
+  if (terminalLocked || bootRunning) return;
+
+  var shutdownOverlay = document.getElementById("shutdownOverlay");
+  if (!shutdownOverlay) return;
+
+  lockTerminalPermanently();
+  resetShutdown();
+
+  shutdownOverlay.classList.add("active");
+  shutdownOverlay.setAttribute("aria-hidden", "false");
+
+  var lines = [
+    "CLOSING ACTIVE SESSION...",
+    "REVOKING OPERATOR ACCESS...",
+    "UNMOUNTING ARCHIVE REGISTRY...",
+    "SEALING INTERNAL NODE...",
+    "SYSTEM SHUTDOWN CONFIRMED."
+  ];
+
+  var ids = ["shutdownLine1", "shutdownLine2", "shutdownLine3", "shutdownLine4", "shutdownLine5"];
+  var currentLine = 0;
+
+  function writeNextShutdownLine() {
+    if (currentLine >= lines.length) {
+      var finalEl = document.getElementById("shutdownFinal");
+      if (finalEl) {
+        setTimeout(function () {
+          finalEl.classList.add("visible");
+        }, 120);
+      }
+
+      setTimeout(function () {
+        playCrtShutdownEffect();
+      }, 1200);
+
+      return;
+    }
+
+    var el = document.getElementById(ids[currentLine]);
+    if (!el) {
+      currentLine++;
+      writeNextShutdownLine();
+      return;
+    }
+
+    el.classList.add("visible");
+
+    typeText(el, lines[currentLine], 18, function () {
+      currentLine++;
+      setTimeout(writeNextShutdownLine, 180);
+    });
+  }
+
+  writeNextShutdownLine();
+}
+
+window.addEventListener("resize", function () {
+  if (!terminalLocked) {
+    scrollScreenTop(currentIndex);
+  }
+});
+
+document.addEventListener("click", function (event) {
+  if (!terminalLocked) return;
+
+  var shutdownOverlay = document.getElementById("shutdownOverlay");
+  if (shutdownOverlay && shutdownOverlay.contains(event.target)) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+}, true);
+
+document.addEventListener("keydown", function (event) {
+  if (!terminalLocked) return;
+  event.preventDefault();
+}, true);
 
 window.onload = function () {
   goTo(0);
-  forceScrollTop();
-  updateScrollLock();
+  scrollScreenTop(0);
 };
